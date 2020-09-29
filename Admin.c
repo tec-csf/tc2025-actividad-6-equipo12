@@ -3,6 +3,10 @@
 ! Red
 ? blue
 TODO: ORANGE xD 
+
+
+TODO: Ya enviamos Rojo, nos falta quitarle uno a la primera vez
+
 ! Descarga una extensión que se llama color comments para que veas bonitos los comentarios xD
 !Semaforos
 *Primero que nada Crear un sevidor y cuatro clientes
@@ -40,27 +44,44 @@ TODO- Volver a enviar el mismo mensaje
 #define TCP_PORT 8000
 
 void gestor(int);
+void gestorDos(int);
 
+typedef struct{
+     int pid;
+     int cliente;
+}PidSockets;
+int cliente;
+
+void imprimirEstructura(int, PidSockets*);
+char ctrlZ[10]="ROJO";
+char ctrlC[12]="INTERMITENTE";
 int main(int argc, const char * argv[])
 {
     struct sockaddr_in direccion;
     char buffer[1000];
+
+    /*sigset_t lasDos;
+    sigemptyset(&lasDos);
+    sigaddset(&lasDos, SIGINT);
+    sigaddset(&lasDos, SIGTSTP);*/
     
     int servidor;
-    int * cliente;
+    //int cliente;
     
     ssize_t leidos;
     socklen_t escritos;
 
     int continuar = 1;
-    pid_t pid;
+    int pid;
+    PidSockets* clientes;
+    clientes =(PidSockets*)malloc(10*sizeof(PidSockets));
 //?-------------------------------------------------------------------------------
 //?-------------------------Control de señales------------------------------------
 //?-------------------------------------------------------------------------------
-        if (signal(SIGTSTP, gestor) == SIG_ERR){
+        if (signal(SIGTSTP, gestorDos) == SIG_ERR){
             printf("ERROR: No se pudo llamar al manejador\n");
         }
-        else if (signal(SIGINT, gestor) == SIG_ERR){
+        else if (signal(SIGINT, gestorDos) == SIG_ERR){
             printf("ERROR: No se pudo llamar al manejador\n");
         }
 //?-------------------------------------------------------------------------------
@@ -91,58 +112,102 @@ int main(int argc, const char * argv[])
     escritos = sizeof(direccion);
     
     // Aceptar conexiones
+    int count=0;
     while (continuar)
     {
-        cliente [0]= accept(servidor, (struct sockaddr *) &direccion, &escritos);
-        
+          //(clientes+count)->cliente=(int*)malloc(100);
+          cliente= accept(servidor, (struct sockaddr *) &direccion, &escritos);
+          //(clientes+count)->cliente=cliente;
+
         printf("Aceptando conexiones en %s:%d \n",
                inet_ntoa(direccion.sin_addr),
                ntohs(direccion.sin_port));
         
-        pid = fork();
+        //(clientes+count)->pid=(int*)malloc(100);
+        pid= fork();
         
+        //(clientes+count)->pid=pid;
+
+        printf("Count: %d", count);
+        count++;
         if (pid == 0) continuar = 0;
         
+        /*{ 
+            //(clientes+count)->pid=getpid();
+            continuar = 0;
+        }
+         //printf("Numero de Cliente: %d, Numero de PID que atiende: %d\n ",cliente, (clientes+count)->pid );*/
+        
     }
-    
+
     if (pid == 0) {
+
+         if (signal(SIGTSTP, gestor) == SIG_ERR){
+            printf("ERROR: No se pudo llamar al manejador\n");
+        }
+        else if (signal(SIGINT, gestor) == SIG_ERR){
+            printf("ERROR: No se pudo llamar al manejador\n");
+        }
         
         close(servidor);
         
         if (cliente >= 0) {
-            
+            cliente=cliente;
+            printf("Cliente %d\n", cliente);
             // Leer datos del socket
-            while (leidos = read(cliente[0], &buffer, sizeof(buffer))) {
+            while (leidos = read(cliente, &buffer, sizeof(buffer))) {
                 write(fileno(stdout), &buffer, leidos);
                 
                 /* Leer de teclado y escribir en el socket */
                 leidos = read(fileno(stdin), &buffer, sizeof(buffer));
-                write(cliente[0], &buffer, leidos);
+                write(cliente, &buffer, leidos);
             }
         }
         
-        //close(cliente[0]);
-    }
+        close(cliente);
     
-    else if (pid > 0)
-    {
-        while (wait(NULL) != -1);
-        
-        // Cerrar sockets
-        //close(servidor); 
-        
+    
     }
+        
+        else{
+            if (pid > 0){
+            while (wait(NULL) != -1);
+            
+            // Cerrar sockets
+            close(servidor); 
+            
+        }
+        }
 //!-------------------------------------------------------------------------------  
 //!-------------------------------FIN DE SOCKETS----------------------------------
 //!-------------------------------------------------------------------------------  
     return 0;
 }
 //* Aquí cuando mandamos estos mensjaes debemos de mandar la señal o algo que reinicie y bloquee a todos los clientes
+/*void imprimirEstructura(int s, PidSockets*clientes){
+         if (s == SIGTSTP){
+		    printf("Acabo de enviar el mensaje ROJO Ctrl+Z a todos los semaforos\n");
+            for(int i=0; i<10; i++){
+            printf("Numero de Cliente: %d, Numero de PID que atiende: %d\n ",(clientes+i)->cliente, (clientes+i)->pid );
+            }
+     }
+
+}*/
+
 void gestor(int s){
 	if (s == SIGTSTP){
-		printf("Acabo de enviar el mensaje ROJO Ctrl+Z a todos los semaforos\n");
+		
+        printf("Acabo de enviar el mensaje ROJO Ctrl+Z a todos los semaforos\n");
+        write(cliente, &ctrlZ, 10);
 	}
 	else{
 		printf("Acabo de enviar el mensaje INTERMITENTE Ctrl+C a todos los semaforos\n");
+        write(cliente, &ctrlC, 12);
+	}
+}
+void gestorDos(int s){
+	if (s == SIGTSTP){
+	}
+	else{
 	}
 }

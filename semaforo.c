@@ -48,9 +48,7 @@ int main(int argc, const char * argv[]){
     }
     
     // Cerrar sockets
-    //close(cliente);
+    close(cliente);
     
     return 0;
 }
-
-
