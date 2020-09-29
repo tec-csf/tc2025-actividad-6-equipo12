@@ -51,21 +51,33 @@ typedef struct{
      int cliente;
 }PidSockets;
 int cliente;
+int * PIDsemaforos;
 
 void imprimirEstructura(int, PidSockets*);
 char ctrlZ[10]="ROJO";
 char ctrlC[12]="INTERMITENTE";
+
+typedef struct{
+    int pid;
+}ArregloPids;
+
 int main(int argc, const char * argv[])
 {
     struct sockaddr_in direccion;
     char buffer[1000];
-
-    /*sigset_t lasDos;
+    pid_t PIDsocket;
+    sigset_t lasDos;
     sigemptyset(&lasDos);
     sigaddset(&lasDos, SIGINT);
-    sigaddset(&lasDos, SIGTSTP);*/
+    sigaddset(&lasDos, SIGTSTP);
+
+    ArregloPids * pidis=(ArregloPids *) malloc(4*sizeof(ArregloPids));
+    
+    int received_int = 0;
     
     int servidor;
+    int tubo[2];
+    pipe(tubo);
     //int cliente;
     
     ssize_t leidos;
@@ -76,7 +88,7 @@ int main(int argc, const char * argv[])
     PidSockets* clientes;
     clientes =(PidSockets*)malloc(10*sizeof(PidSockets));
 //?-------------------------------------------------------------------------------
-//?-------------------------Control de señales------------------------------------
+//?-------------------------Control de señales Para el padre----------------------
 //?-------------------------------------------------------------------------------
         if (signal(SIGTSTP, gestorDos) == SIG_ERR){
             printf("ERROR: No se pudo llamar al manejador\n");
@@ -107,40 +119,29 @@ int main(int argc, const char * argv[])
     bind(servidor, (struct sockaddr *) &direccion, sizeof(direccion));
     
     // Escuhar
-    listen(servidor, 10);
+    listen(servidor, 4);
     
     escritos = sizeof(direccion);
     
     // Aceptar conexiones
-    int count=0;
+    
     while (continuar)
     {
-          //(clientes+count)->cliente=(int*)malloc(100);
-          cliente= accept(servidor, (struct sockaddr *) &direccion, &escritos);
-          //(clientes+count)->cliente=cliente;
+        cliente= accept(servidor, (struct sockaddr *) &direccion, &escritos);
 
         printf("Aceptando conexiones en %s:%d \n",
                inet_ntoa(direccion.sin_addr),
                ntohs(direccion.sin_port));
-        
-        //(clientes+count)->pid=(int*)malloc(100);
         pid= fork();
         
-        //(clientes+count)->pid=pid;
-
-        printf("Count: %d", count);
-        count++;
         if (pid == 0) continuar = 0;
-        
-        /*{ 
-            //(clientes+count)->pid=getpid();
-            continuar = 0;
-        }
-         //printf("Numero de Cliente: %d, Numero de PID que atiende: %d\n ",cliente, (clientes+count)->pid );*/
         
     }
 
     if (pid == 0) {
+//?-------------------------------------------------------------------------------
+//?-------------------------Control de señales Para los Hijos---------------------
+//?-------------------------------------------------------------------------------
 
          if (signal(SIGTSTP, gestor) == SIG_ERR){
             printf("ERROR: No se pudo llamar al manejador\n");
@@ -148,20 +149,38 @@ int main(int argc, const char * argv[])
         else if (signal(SIGINT, gestor) == SIG_ERR){
             printf("ERROR: No se pudo llamar al manejador\n");
         }
+
+//?-------------------------------------------------------------------------------
+//?---------------------------FIN CONTROL DE SEÑALES------------------------------
+//?-------------------------------------------------------------------------------
         
         close(servidor);
+        int count=0;
         
         if (cliente >= 0) {
             cliente=cliente;
             printf("Cliente %d\n", cliente);
             // Leer datos del socket
-            while (leidos = read(cliente, &buffer, sizeof(buffer))) {
-                write(fileno(stdout), &buffer, leidos);
+
+            while (leidos= read(cliente, &received_int, sizeof(received_int))) {
+                //write(fileno(stdout), &buffer, leidos);
                 
                 /* Leer de teclado y escribir en el socket */
-                leidos = read(fileno(stdin), &buffer, sizeof(buffer));
-                write(cliente, &buffer, leidos);
+                //leidos = read(fileno(stdin), &PIDsocket, sizeof(pid_t));
+                //write(cliente, &buffer, leidos);
+                //return_status = read(client_socket, &received_int, sizeof(received_int));
+                if (leidos > 0) {
+                    (pidis+count)->pid=ntohl(received_int);
+                    fprintf(stdout, "Received int = %d\n", ntohl(received_int));
+                    count++;
+                }
+                else {
+                // Handling erros here
+                }
             }
+        }
+        for(int i=0; i<4; i++){
+            printf("%d\n", (pidis+i)->pid);
         }
         
         close(cliente);
@@ -171,6 +190,11 @@ int main(int argc, const char * argv[])
         
         else{
             if (pid > 0){
+
+            leer(tubo);
+
+
+
             while (wait(NULL) != -1);
             
             // Cerrar sockets
@@ -205,9 +229,40 @@ void gestor(int s){
         write(cliente, &ctrlC, 12);
 	}
 }
+
 void gestorDos(int s){
 	if (s == SIGTSTP){
 	}
 	else{
 	}
+}
+
+
+void leer(int * fd)
+{
+    int c;
+    
+    while( 1 )
+    {
+        close(fd[1]);
+        read(fd[0], &c, sizeof(int));
+        printf("---  Recibí f(%d) = %d  \n", c, factorial(c));
+    }
+    
+}
+void escribir(int * fd)
+{
+    int num;
+    
+    
+    while(1)
+    {
+        printf("Entre un número: ");
+        scanf("%d", &num);
+        close (fd[0]);
+        printf("+++ Envío %d \n", num);
+        write(fd[1], &num, sizeof(int));
+    }
+    
+    
 }
