@@ -71,9 +71,19 @@ int main(int argc, const char * argv[]){
         write(cliente, &pidConvert, sizeof(pidConvert));
         leidos = read(cliente, &pidGet, sizeof(pidGet));
         nextPid=ntohl(pidGet);
-
-        signal(SIGUSR1, gestorEstado);
-        signal(SIGALRM, gestorNextEstado);
+//?-------------------------------------------------------------------------------
+//?-------------------------Recibir señales de los semaforos----------------------
+//?-------------------------------------------------------------------------------
+        
+        if (signal(SIGUSR1, gestorEstado) == SIG_ERR){
+            printf("ERROR: No se pudo llamar al manejador\n");
+        }
+        else if (signal(SIGALRM, gestorNextEstado) == SIG_ERR){
+            printf("ERROR: No se pudo llamar al manejador\n");
+        } 
+//?-------------------------------------------------------------------------------
+//?---------------------------Fin señales de los semaforos------------------------
+//?-------------------------------------------------------------------------------
                    
         while ((leidos = read(cliente, &received_int, sizeof(received_int)))){
             if (ntohl(received_int) == 5) {
