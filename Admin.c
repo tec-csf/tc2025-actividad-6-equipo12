@@ -1,6 +1,8 @@
 /*
-Rafael Díaz Medina A01024592
-Edgar García A01031730
+! Rafael Díaz Medina A01024592
+* Edgar García A01031730
+? Benjamin Ruiz A01020825 de otro equipo colaboro con nosotros
+
 * Green
 ! Red
 ? blue
@@ -261,8 +263,7 @@ void estadoActual(int s) {
     }
     printf("\n");
 }
-//* Aquí cuando mandamos estos mensjaes debemos de mandar la señal o algo que reinicie y bloquee a todos los clientes 😆
-//* Aquí falta ponerle los colores adecuados a la calle Rafa 😆
+//* Aquí cuando mandamos estos mensjaes debemos de mandar la señal o algo que reinicie y bloquee a todos los clientes
 void gestor(int s){
 	if (s == SIGTSTP){
         int ctrlZ=htonl(2);
@@ -275,7 +276,7 @@ void gestor(int s){
 }
 void gestorDos(int s){
 	if (s == SIGTSTP){
-        if (r%2==0){
+        if (r%2==0 && m%2==0){
             printf("Acabo de enviar el mensaje ROJO Ctrl+Z a todos los semaforos\n");
             printf("\033[0;91m");
             for (int i = 0; i < 5; i++){
@@ -309,7 +310,7 @@ void gestorDos(int s){
         r++;
     }
 	else if(s==SIGINT){
-         if (m%2==0){
+         if (m%2==0 && r%2==0){
             printf("Acabo de enviar el mensaje ROJO Ctrl+C a todos los semaforos\n");
             printf("\033[0;93m");
             for (int i = 0; i < 5; i++){

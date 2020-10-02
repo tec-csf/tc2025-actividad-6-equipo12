@@ -1,6 +1,7 @@
 /*
-Rafael Díaz Medina A01024592
-Edgar García A01031730
+! Rafael Díaz Medina A01024592
+* Edgar García A01031730
+? Benjamin Ruiz A01020825 de otro equipo colaboro con nosotros
 */
 #include <stdio.h>
 #include <sys/socket.h>
@@ -23,7 +24,7 @@ void gestorNextEstado(int signal);
 int cliente;  
 int nextPid;  
 int estado;   
-int estadoAnterior;
+//int estadoAnterior;
 
 int main(int argc, const char * argv[]){
  
@@ -44,12 +45,12 @@ int main(int argc, const char * argv[]){
     sigaddset(&lasDos, SIGINT);
     sigaddset(&lasDos, SIGTSTP);
     sigaddset(&lasDos,SIGALRM);
-    if (signal(SIGTSTP, SIG_IGN) == SIG_ERR){
+    /*if (signal(SIGTSTP, SIG_IGN) == SIG_ERR){
         printf("ERROR: No se pudo llamar al manejador\n");
     }
     else if (signal(SIGINT, SIG_IGN) == SIG_ERR){
         printf("ERROR: No se pudo llamar al manejador\n");
-    } 
+    } */
 //?-------------------------------------------------------------------------------
 //?---------------------------FIN CONTROL DE SEÑALES------------------------------
 //?-------------------------------------------------------------------------------
@@ -96,26 +97,26 @@ int main(int argc, const char * argv[]){
                 raise(SIGUSR1);
             } 
             else if (ntohl( receivedInt) == 2 && estado != 2){
-                estadoAnterior=estado;
+                //estadoAnterior=estado;
                 estado = 2;
-                printf("Entre al rojo");
+                printf("Entre al rojo\n");
                 sigprocmask(SIG_BLOCK, &lasDos, NULL);
             } 
             else if (ntohl( receivedInt) == 3 && estado != 3){
-                estadoAnterior=estado;
+                //estadoAnterior=estado;
                 estado = 3;
                 printf("entre al intermitente \n");
                 sigprocmask(SIG_BLOCK, &lasDos, NULL);
             }
             else if (ntohl( receivedInt) == 2 && estado == 2){//? Para la segunda vez
-                estado=estadoAnterior;
-                printf("Sali del Rojo");             
+                //estado=estadoAnterior;
+                printf("Sali del Rojo\n");             
                 sigprocmask(SIG_UNBLOCK, &lasDos, NULL);
                      
             } 
             else if (ntohl( receivedInt) == 3 && estado == 3){//? Para la segunda vez
-                estado=estadoAnterior;
-                printf("Sali del intermitente");
+                //estado=estadoAnterior;
+                printf("Sali del intermitente\n");
                 sigprocmask(SIG_UNBLOCK, &lasDos, NULL);     
             }
         }
@@ -129,7 +130,7 @@ void gestorEstado(int s){
     int time=4;
     int state=htonl(1);
     write(cliente, &state, sizeof(int));
-    printf("Me cambie a verde soy el %d\n", getpid());
+    //printf("Me cambie a verde soy el %d\n", getpid());
     alarm(time);
 }
 
