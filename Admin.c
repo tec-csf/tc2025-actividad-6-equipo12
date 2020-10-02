@@ -1,11 +1,14 @@
- /*
+/*
+Rafael Díaz Medina A01024592
+Edgar García A01031730
 * Green
 ! Red
 ? blue
 TODO: ORANGE xD 
 
 
-TODO: Nos faltan las señales
+TODO: Ya enviamos Rojo, nos falta quitarle uno a la primera vez
+
 ! Descarga una extensión que se llama color comments para que veas bonitos los comentarios xD
 !Semaforos
 *Primero que nada Crear un sevidor y cuatro clientes
@@ -30,7 +33,6 @@ TODO- Volver a enviar el mismo mensaje
 !Primero hacer el server y luego el cliente!
 !Luego hacer la recepción de señales de cada estado, ctrl+c y ctrl+z
 */
-
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -45,12 +47,15 @@ TODO- Volver a enviar el mismo mensaje
 //* Tipos de funciones
 
 void gestor(int);
+void gestorDos(int);
 void estadoActual(int);
 
 //* Variables Globales
-int semaforo;  
+int semaforo;
 int cliente[4];
-//!---------------Main----------------
+int r;
+int m;
+//!---------------Main---------------
 int main(int argc, const char * argv[]){
     sigset_t lasDos;
     
@@ -69,12 +74,12 @@ int main(int argc, const char * argv[]){
     sigemptyset(&lasDos);
     sigaddset(&lasDos, SIGINT);
     sigaddset(&lasDos, SIGTSTP);
-    if (signal(SIGTSTP, SIG_IGN) == SIG_ERR){
+    if (signal(SIGTSTP, gestorDos) == SIG_ERR){
         printf("ERROR: No se pudo llamar al manejador\n");
     }
-    else if (signal(SIGINT, SIG_IGN) == SIG_ERR){
+    else if (signal(SIGINT, gestorDos) == SIG_ERR){
         printf("ERROR: No se pudo llamar al manejador\n");
-    } 
+    }
 //?-------------------------------------------------------------------------------
 //?---------------------------FIN CONTROL DE SEÑALES------------------------------
 //?-------------------------------------------------------------------------------
@@ -87,21 +92,19 @@ int main(int argc, const char * argv[]){
         exit(-1);
     }
     
-     
+    // Crear el socket
     servidor = socket(PF_INET, SOCK_STREAM, 0);
-     
+    // Enlace con el socket
     inet_aton(argv[1], &direccion.sin_addr);
     direccion.sin_port = htons(TCP_PORT);
     direccion.sin_family = AF_INET;
     
     bind(servidor, (struct sockaddr *) &direccion, sizeof(direccion));
     
-     
+    // Escuhar
     listen(servidor, 4);
     
     escritos = sizeof(direccion);
-    
-
 
     int * semaforos;
     semaforos=(int*)malloc(4*sizeof(int));
@@ -134,37 +137,43 @@ int main(int argc, const char * argv[]){
 //?-------------------------------------------------------------------------------
 //?---------------------------FIN CONTROL DE SEÑALES------------------------------
 //?-------------------------------------------------------------------------------
-
+            
+            semaforo=cliente[count];
             close(servidor);
+
             if (cliente[count] >= 0) {
-                 
                 int pidReceivedConv;
-                //Leer datos del Socket
-                while(leidos = read(cliente[count], &pidReceivedConv, sizeof(pidReceivedConv))) {
-                    estadoActual(count);  
-                    printf("Soy el %d\n", getpid());
+                //Leer datos del socket
+                while(leidos = read(semaforo, &pidReceivedConv, sizeof(pidReceivedConv))) {
+                    estadoActual(count);
+                    printf("Soy el %d", getpid());
                 }
             }
-            close(cliente[count]);
+
+            close(semaforo);
         }
-        else {// Cumple la función de comunicación entre padre e hijo
+        else {//? Cumple la función de comunicación entre padre e hijo
             pidSemaforos[count] = read(cliente[count], i, sizeof(i));
         }
     }
 
     if (pid > 0) {
         for (int j = 0; j < 4; j++) {
-            int nextSemaforo = (j + 1) % 4;
-            write(cliente[j], &semaforos[nextSemaforo], sizeof(pidSemaforos[nextSemaforo]));
+            if (j==3){
+
+                write(cliente[j], &semaforos[0], sizeof(int));
+            }
+            else{
+                write(cliente[j], &semaforos[j+1], sizeof(int));
+            }
         }
-         
-        int start = 5; 
-        int convert= htonl(start);
+
+        int convert= htonl(5);
         write(cliente[0], &convert, sizeof(convert));
 
         while (wait(NULL) != -1);
         
-        //Cerrar Sockets
+        // Cerrar sockets
         close(servidor);
         
     }
@@ -176,41 +185,161 @@ int main(int argc, const char * argv[]){
 //!-------------------------------------------------------------------------------  
     return 0;
 }
-//* Con esta función mandamos el estado actual que tenemoos para imprimir los colores
+//* 😎 Con esta función mandamos el estado actual que tenemoos para imprimir los colores 😎
 void estadoActual(int s) {
+    printf("\n\t\t--------Calles Don Rafa y Edgar---------\n");
     for (int i=0; i<4; i++) {
-        if (i == s){
-            printf("\033[0;92m");
-            printf("Semaforo %d: VERDE\n", i);
-            printf("\033[0m;");
+        
+        if (i == 0){
+            for (int i = 0; i < 5; i++){
+                printf("\t\t\t |\t\t|\n");
+                if(i==4){
+                    printf("\t\t\t |##############|\n");
+                }
+            }
+            
+            if(i==s){
+                printf("\033[0;92m");
+                printf("\t\t  Verde%d |\t",i);
+                printf("\033[0m");
+            }
+            else{
+                printf("\033[0;91m");
+                printf("\t\t   Rojo%d |\t    ",i);
+                printf("\033[0m");
+            }
         }
-        else{
-            printf("\033[0;91m");
-            printf("Semaforo %d: ROJO\n", i);
-            printf("\033[0m;");
+        else if (i==1){
+            if(i==s){
+                printf("\033[0;92m");
+                printf("    | Verde%d\n",i);
+                printf("\033[0m");
+            }
+            else{
+                printf("\033[0;91m");
+                printf("\t| Rojo%d\n", i);
+                printf("\033[0m");
+            }
+            printf("-------------------------|\t\t|-------------------------\n");
+            for(int i=0; i<5;i++){
+                printf("\t\t      #");
+                printf("\t\t\t   #\n");
+            }
+
+            printf("-------------------------|\t\t|-------------------------\n");
+        }
+        else if(i==2){
+            if(i==s){
+                printf("\033[0;92m");
+                printf("\t\t   Verde%d|\t",i);
+                printf("\033[0m");
+            }
+            else{
+                printf("\033[0;91m");
+                printf("\t\t   Rojo%d |\t",i);
+                printf("\033[0m");
+            }   
+        }
+        else if(i==3){
+            if(i==s){
+                printf("\033[0;92m");
+                printf("\t| Verde%d\n",i);
+                printf("\033[0m");
+            }
+            else{
+                printf("\033[0;91m");
+                printf("\t| Rojo%d\n", i);
+                printf("\033[0m");
+            }  
+            for (int i = 0; i < 5; i++){
+                if(i==0){
+                    printf("\t\t\t |##############|\n");
+                }
+                printf("\t\t\t |\t\t|\n");
+            }
         }
     }
     printf("\n");
 }
-//* Aquí cuando mandamos estos mensjaes debemos de mandar la señal o algo que reinicie y bloquee a todos los clientes
+//* Aquí cuando mandamos estos mensjaes debemos de mandar la señal o algo que reinicie y bloquee a todos los clientes 😆
+//* Aquí falta ponerle los colores adecuados a la calle Rafa 😆
 void gestor(int s){
 	if (s == SIGTSTP){
-        
         int ctrlZ=htonl(2);
-        printf("Acabo de enviar el mensaje ROJO Ctrl+Z a todos los semaforos\n");
-        
-        for (int i = 0; i < 4; i++){
-            printf("Semaforo %d: ROJO EMERGENCIA\n", i);
-            write(cliente[i], &ctrlZ, sizeof(ctrlZ));
-        }
-        
-	}
+        write(semaforo, &ctrlZ, sizeof(ctrlZ));
+    }
 	else if(s==SIGINT){
         int ctrlC=htonl(3);
-		printf("Acabo de enviar el mensaje INTERMITENTE Ctrl+C a todos los semaforos\n");
-         for (int i = 0; i < 4; i++){
-             printf("Semaforo %d: INTERMITENTE\n", i);
-            write(cliente[i], &ctrlC, sizeof(ctrlC));
-        }
+        write(semaforo, &ctrlC, sizeof(ctrlC));   
 	}
+}
+void gestorDos(int s){
+	if (s == SIGTSTP){
+        if (r%2==0){
+            printf("Acabo de enviar el mensaje ROJO Ctrl+Z a todos los semaforos\n");
+            printf("\033[0;91m");
+            for (int i = 0; i < 5; i++){
+                printf("\t\t\t |\t\t|\n");
+                if(i==4){
+                    printf("\t\t\t |##############|\n");
+                }
+            }
+            printf("\t\t    Rojo |\t    ");
+            printf("\t| Rojo\n");
+            printf("-------------------------|\t\t|-------------------------\n");
+            for(int i=0; i<5;i++){
+                printf("\t\t      #");
+                printf("\t\t\t   #\n");
+            }
+            printf("-------------------------|\t\t|-------------------------\n");
+            printf("\t\t    Rojo |\t");
+            printf("\t| Rojo\n");
+            for (int i = 0; i < 5; i++){
+                if(i==0){
+                    printf("\t\t\t |##############|\n");
+                }
+                printf("\t\t\t |\t\t|\n");
+            }
+            printf("\033[0m"); 
+            printf("\n");
+        }
+        else{
+            printf("Semaforos Don Rafa y Edgar regresaron a la normalidad\n");
+        }
+        r++;
+    }
+	else if(s==SIGINT){
+         if (m%2==0){
+            printf("Acabo de enviar el mensaje ROJO Ctrl+C a todos los semaforos\n");
+            printf("\033[0;93m");
+            for (int i = 0; i < 5; i++){
+                printf("\t\t\t |\t\t|\n");
+                if(i==4){
+                    printf("\t\t\t |##############|\n");
+                }
+            }   
+            printf("\t     Intermitent |\t    ");
+            printf("\t| Intermitent\n");
+            printf("-------------------------|\t\t|-------------------------\n");
+            for(int i=0; i<5;i++){
+                printf("\t\t      #");
+                printf("\t\t\t   #\n");
+            }
+            printf("-------------------------|\t\t|-------------------------\n");
+            printf("\t     Intermitent |\t    ");
+            printf("\t| Intermitent\n");
+            for (int i = 0; i < 5; i++){
+                if(i==0){
+                    printf("\t\t\t |##############|\n");
+                }
+                printf("\t\t\t |\t\t|\n");
+            }
+            printf("\033[0m"); 
+        printf("\n");
+        }
+        else{
+            printf("Semaforos Don Rafa y Edgar regresaron a la normalidad\n");
+        }
+        m++;
+    }
 }

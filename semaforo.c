@@ -1,3 +1,7 @@
+/*
+Rafael Díaz Medina A01024592
+Edgar García A01031730
+*/
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,7 +12,6 @@
 #include <signal.h>
 
 #define TCP_PORT 8000
-#define time 3
 //!-------------------Debemos de ver como hacer que este cliente se comunique con los otros clientes
 //!-----------Pienso que tal vez debamos de usar la función Listen de el servidor
 //* Tipos de funciones
@@ -17,9 +20,10 @@ void gestorEstado(int signal);
 void gestorNextEstado(int signal);
 
 //* Variables Globales
-int cliente;
-int nextPid; 
-int estado; 
+int cliente;  
+int nextPid;  
+int estado;   
+int estadoAnterior;
 
 int main(int argc, const char * argv[]){
  
@@ -31,6 +35,7 @@ int main(int argc, const char * argv[]){
     ssize_t leidos;
     socklen_t escritos;
     sigset_t lasDos;
+
 //?-------------------------------------------------------------------------------
 //?-------------------------Control de señales Para el padre----------------------
 //?-------------------------------------------------------------------------------
@@ -38,6 +43,7 @@ int main(int argc, const char * argv[]){
     sigaddset(&lasDos, SIGUSR1);
     sigaddset(&lasDos, SIGINT);
     sigaddset(&lasDos, SIGTSTP);
+    sigaddset(&lasDos,SIGALRM);
     if (signal(SIGTSTP, SIG_IGN) == SIG_ERR){
         printf("ERROR: No se pudo llamar al manejador\n");
     }
@@ -53,7 +59,7 @@ int main(int argc, const char * argv[]){
         exit(-1);
     }
     
-    int received_int;//Para las señales que llegan
+    int  receivedInt;//*Para el pid que recibimos
     // Crear el socket
     cliente = socket(PF_INET, SOCK_STREAM, 0);
     // Establecer conexión
@@ -63,10 +69,10 @@ int main(int argc, const char * argv[]){
     
     escritos = connect(cliente, (struct sockaddr *) &direccion, sizeof(direccion));
     
-    if (escritos == 0) {
+    if (escritos == 0){
         printf("Conectado a %s:%d \n",
-               inet_ntoa(direccion.sin_addr),
-               ntohs(direccion.sin_port));
+                inet_ntoa(direccion.sin_addr),
+                ntohs(direccion.sin_port));
 
         write(cliente, &pidConvert, sizeof(pidConvert));
         leidos = read(cliente, &pidGet, sizeof(pidGet));
@@ -74,7 +80,7 @@ int main(int argc, const char * argv[]){
 //?-------------------------------------------------------------------------------
 //?-------------------------Recibir señales de los semaforos----------------------
 //?-------------------------------------------------------------------------------
-        
+
         if (signal(SIGUSR1, gestorEstado) == SIG_ERR){
             printf("ERROR: No se pudo llamar al manejador\n");
         }
@@ -84,46 +90,51 @@ int main(int argc, const char * argv[]){
 //?-------------------------------------------------------------------------------
 //?---------------------------Fin señales de los semaforos------------------------
 //?-------------------------------------------------------------------------------
-                   
-        while ((leidos = read(cliente, &received_int, sizeof(received_int)))){
-            if (ntohl(received_int) == 5) {
+
+        while ((leidos = read(cliente, & receivedInt, sizeof( receivedInt)))){
+            if (ntohl( receivedInt) == 5){
                 raise(SIGUSR1);
             } 
-            else if (ntohl(received_int) == 2 && estado != 2) {
+            else if (ntohl( receivedInt) == 2 && estado != 2){
                 estadoAnterior=estado;
-                sigprocmask(SIG_BLOCK, &lasDos, NULL);
                 estado = 2;
+                printf("Entre al rojo");
+                sigprocmask(SIG_BLOCK, &lasDos, NULL);
             } 
-            else if (ntohl(received_int) == 3 && estado != 3) {
+            else if (ntohl( receivedInt) == 3 && estado != 3){
                 estadoAnterior=estado;
-                sigprocmask(SIG_UNBLOCK, &lasDos, NULL);
                 estado = 3;
+                printf("entre al intermitente \n");
+                sigprocmask(SIG_BLOCK, &lasDos, NULL);
             }
-            else if (ntohl(received_int) == 2 && estado == 2) {//? Para la segunda Vez
+            else if (ntohl( receivedInt) == 2 && estado == 2){//? Para la segunda vez
+                estado=estadoAnterior;
+                printf("Sali del Rojo");             
                 sigprocmask(SIG_UNBLOCK, &lasDos, NULL);
-                estado = estadoAnterior;
+                     
             } 
-            else if (ntohl(received_int) == 3 && estado == 3) { //? Para la segunda vez
-                sigprocmask(SIG_UNBLOCK, &lasDos, NULL);
-                estado = estadoAnterior;
-            }     
+            else if (ntohl( receivedInt) == 3 && estado == 3){//? Para la segunda vez
+                estado=estadoAnterior;
+                printf("Sali del intermitente");
+                sigprocmask(SIG_UNBLOCK, &lasDos, NULL);     
+            }
         }
     }
     // Cerrar sockets
     close(cliente);
-    
     return 0;
 }
-
-void gestorEstado(int signal) {
-    estado = 1;
-    int state=htonl(estado);
-    write(cliente, &state, sizeof(state));
+//* Enviamos el estado actual a nuestro server para que el lo imprima
+void gestorEstado(int s){
+    int time=4;
+    int state=htonl(1);
+    write(cliente, &state, sizeof(int));
     printf("Me cambie a verde soy el %d\n", getpid());
     alarm(time);
 }
 
-void gestorNextEstado(int signal) {
+//* Enviamos el estado que sigue
+void gestorNextEstado(int s){
     estado = 0;
     kill(nextPid, SIGUSR1);
 }
